@@ -44,6 +44,7 @@ func (h *OrderHandlers) getOrder(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	order, ok := h.Orders[params["id"]]
 	if ok {
+
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(order); err != nil {
 			log.Printf("Error encoding order: %v", err)
