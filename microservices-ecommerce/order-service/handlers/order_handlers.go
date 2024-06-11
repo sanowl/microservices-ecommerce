@@ -107,12 +107,17 @@ func (h *OrderHandlers) respondWithJSON(w http.ResponseWriter, status int, paylo
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		h.respondWithError(w, http.StatusInternalServerError, "Error encoding response")
+		h.logAndRespondWithError(w, http.StatusInternalServerError, "Error encoding response")
 	}
 }
 
 // respondWithError writes an error response to the client
 func (h *OrderHandlers) respondWithError(w http.ResponseWriter, status int, message string) {
+	h.logAndRespondWithError(w, status, message)
+}
+
+// logAndRespondWithError logs the error and writes an error response to the client
+func (h *OrderHandlers) logAndRespondWithError(w http.ResponseWriter, status int, message string) {
 	log.Printf("HTTP %d - %s", status, message)
 	h.respondWithJSON(w, status, map[string]string{"error": message})
 }
