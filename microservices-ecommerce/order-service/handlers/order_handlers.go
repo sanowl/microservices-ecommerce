@@ -79,6 +79,7 @@ func (h *OrderHandlers) updateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	updatedOrder.ID = params["id"] // Ensure the ID remains unchanged
 	h.Orders[params["id"]] = updatedOrder
 	h.respondWithJSON(w, http.StatusOK, updatedOrder)
 }
