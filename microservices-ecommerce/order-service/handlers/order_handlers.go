@@ -74,12 +74,14 @@ func (h *OrderHandlers) updateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := h.Orders[params["id"]]; !ok {
+	existingOrder, ok := h.Orders[params["id"]]
+	if !ok {
 		h.respondWithError(w, http.StatusNotFound, "Order not found")
 		return
 	}
 
-	updatedOrder.ID = params["id"] // Ensure the ID remains unchanged
+	// Ensure the ID remains unchanged
+	updatedOrder.ID = existingOrder.ID
 	h.Orders[params["id"]] = updatedOrder
 	h.respondWithJSON(w, http.StatusOK, updatedOrder)
 }
@@ -111,6 +113,6 @@ func (h *OrderHandlers) respondWithJSON(w http.ResponseWriter, status int, paylo
 
 // respondWithError writes an error response to the client
 func (h *OrderHandlers) respondWithError(w http.ResponseWriter, status int, message string) {
-	h.respondWithJSON(w, status, map[string]string{"error": message})
 	log.Printf("HTTP %d - %s", status, message)
+	h.respondWithJSON(w, status, map[string]string{"error": message})
 }
