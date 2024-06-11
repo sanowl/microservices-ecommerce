@@ -34,72 +34,59 @@ func (h *OrderHandlers) RegisterOrderHandlers(r *mux.Router) {
 }
 
 func (h *OrderHandlers) getOrders(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(h.Orders); err != nil {
-		h.handleError(w, http.StatusInternalServerError, "Error encoding orders", err)
-	}
+	h.respondWithJSON(w, http.StatusOK, h.Orders)
 }
 
 func (h *OrderHandlers) getOrder(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	order, ok := h.Orders[params["id"]]
 	if !ok {
-		h.handleError(w, http.StatusNotFound, "Order not found", nil)
+		h.respondWithError(w, http.StatusNotFound, "Order not found")
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(order); err != nil {
-		h.handleError(w, http.StatusInternalServerError, "Error encoding order", err)
-	}
+	h.respondWithJSON(w, http.StatusOK, order)
 }
 
 func (h *OrderHandlers) createOrder(w http.ResponseWriter, r *http.Request) {
 	var order models.Order
 	if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
-		h.handleError(w, http.StatusBadRequest, "Invalid order data", err)
+		h.respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 	if !isValidOrder(order) {
-		h.handleError(w, http.StatusBadRequest, "Invalid order fields", nil)
+		h.respondWithError(w, http.StatusBadRequest, "Invalid order data")
 		return
 	}
 
 	h.Orders[order.ID] = order
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(order); err != nil {
-		h.handleError(w, http.StatusInternalServerError, "Error encoding order", err)
-	}
+	h.respondWithJSON(w, http.StatusCreated, order)
 }
 
 func (h *OrderHandlers) updateOrder(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	var updatedOrder models.Order
 	if err := json.NewDecoder(r.Body).Decode(&updatedOrder); err != nil {
-		h.handleError(w, http.StatusBadRequest, "Invalid order data", err)
+		h.respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 	if !isValidOrder(updatedOrder) {
-		h.handleError(w, http.StatusBadRequest, "Invalid order fields", nil)
+		h.respondWithError(w, http.StatusBadRequest, "Invalid order data")
 		return
 	}
 
 	if _, ok := h.Orders[params["id"]]; !ok {
-		h.handleError(w, http.StatusNotFound, "Order not found", nil)
+		h.respondWithError(w, http.StatusNotFound, "Order not found")
 		return
 	}
 
 	h.Orders[params["id"]] = updatedOrder
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(updatedOrder); err != nil {
-		h.handleError(w, http.StatusInternalServerError, "Error encoding updated order", err)
-	}
+	h.respondWithJSON(w, http.StatusOK, updatedOrder)
 }
 
 func (h *OrderHandlers) deleteOrder(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	if _, ok := h.Orders[params["id"]]; !ok {
-		h.handleError(w, http.StatusNotFound, "Order not found", nil)
+		h.respondWithError(w, http.StatusNotFound, "Order not found")
 		return
 	}
 
@@ -112,12 +99,17 @@ func isValidOrder(order models.Order) bool {
 	return order.ID != "" && order.ProductID != "" && order.Quantity > 0 && order.Total > 0
 }
 
-// handleError logs the error and sends an error response to the client
-func (h *OrderHandlers) handleError(w http.ResponseWriter, statusCode int, message string, err error) {
-	if err != nil {
-		log.Printf("%s: %v", message, err)
-	} else {
-		log.Println(message)
+// respondWithJSON writes a JSON response to the client
+func (h *OrderHandlers) respondWithJSON(w http.ResponseWriter, status int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		h.respondWithError(w, http.StatusInternalServerError, "Error encoding response")
 	}
-	http.Error(w, message, statusCode)
+}
+
+// respondWithError writes an error response to the client
+func (h *OrderHandlers) respondWithError(w http.ResponseWriter, status int, message string) {
+	h.respondWithJSON(w, status, map[string]string{"error": message})
+	log.Printf("HTTP %d - %s", status, message)
 }
